@@ -377,6 +377,7 @@ static void showTest(Webs *wp)
 /*
     Dump the file upload details. Don't actually do anything with the uploaded file.
  */
+#if 0
 static void uploadTest(Webs *wp)
 {
     WebsKey         *s;
@@ -408,6 +409,22 @@ static void uploadTest(Webs *wp)
     }
     websDone(wp);
 }
+#endif
+
+static void uploadTest(Webs *wp)
+{
+    WebsKey         *s;
+    WebsUpload      *up;
+    char            *upfile;
+
+     upfile = sfmt("%s/tmp/%s", websGetDocuments(), up->clientFilename);
+
+     if (rename(up->filename, upfile) < 0) {
+          error("Cannot rename uploaded file: %s to %s, errno %d", up->filename, upfile, errno);
+     }
+     wfree(upfile);
+}
+
 #endif
 
 
