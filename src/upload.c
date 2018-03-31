@@ -454,7 +454,7 @@ WebsHash websGetUpload(Webs *wp)
 
 PUBLIC void websUploadOpen()
 {
-    uploadDir = ME_GOAHEAD_UPLOAD_DIR;
+    uploadDir = "/tmp"; //ME_GOAHEAD_UPLOAD_DIR;
     if (*uploadDir == '\0') {
 #if ME_WIN_LIKE
         uploadDir = getenv("TEMP");
