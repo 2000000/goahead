@@ -377,7 +377,7 @@ static void showTest(Webs *wp)
 /*
     Dump the file upload details. Don't actually do anything with the uploaded file.
  */
-#if 0
+#if 1
 static void uploadTest(Webs *wp)
 {
     WebsKey         *s;
@@ -409,7 +409,7 @@ static void uploadTest(Webs *wp)
     }
     websDone(wp);
 }
-#endif
+#else
 
 static void uploadTest(Webs *wp)
 {
@@ -424,6 +424,7 @@ static void uploadTest(Webs *wp)
      }
      wfree(upfile);
 }
+#endif
 
 #endif
 
