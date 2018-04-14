@@ -52,6 +52,7 @@ static int aspTest(int eid, Webs *wp, int argc, char **argv);
 static int bigTest(int eid, Webs *wp, int argc, char **argv);
 #endif
 static void actionTest(Webs *wp);
+static void setipaddress(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -174,6 +175,7 @@ MAIN(goahead, int argc, char **argv, char **envp)
     websDefineJst("bigTest", bigTest);
 #endif
     websDefineAction("test", actionTest);
+    websDefineAction("setipaddress", setipaddress);
     websDefineAction("sessionTest", sessionTest);
     websDefineAction("showTest", showTest);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -320,6 +322,15 @@ static int bigTest(int eid, Webs *wp, int argc, char **argv)
 }
 #endif
 
+
+static void setipaddress(Webs *wp)
+{
+    cchar *netAddress, *subaddress;
+    netAddress = websGetVar(wp, "netAddress", NULL);
+    subaddress = websGetVar(wp, "subaddress", NULL);
+    printf("ip addr is : %s\n", netAddress);
+    printf("sub addr is: %s\n", subaddress);
+}
 
 /*
     Implement /action/actionTest. Parse the form variables: name, address and echo back.
