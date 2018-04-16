@@ -177,6 +177,9 @@ PUBLIC int websJstOpen()
 {
     websJstFunctions = hashCreate(WEBS_HASH_INIT * 2);
     websDefineJst("write", websJstWrite);
+    websDefineJst("readVer", websJstReadVer);
+    websDefineJst("getVol", websJstGetVol);
+    websDefineJst("getThermal", websJstGetThermal);
     websDefineHandler("jst", 0, jstHandler, closeJst, 0);
     return 0;
 }
@@ -214,6 +217,48 @@ PUBLIC int websJstWrite(int jid, Webs *wp, int argc, char **argv)
     return 0;
 }
 
+/* -------------------添加自己的jst------------------- */
+PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv)
+{
+    assert(websValid(wp));
+    printf("---%s---\n", argv[0]);
+    if(!strcmp(argv[0],"boot")){
+        websWriteBlock(wp, "u-boot201803", strlen("u-boot201803"));
+    } else if(!strcmp(argv[0],"zynq")){
+        websWriteBlock(wp, "zynq-v20180415", strlen("zynq-v20180415"));
+    } else if(!strcmp(argv[0],"linux")) {
+        websWriteBlock(wp, "kernel-4.14", strlen("kernel-4.14"));
+    } else if(!strcmp(argv[0],"fpga")){
+        websWriteBlock(wp, "fpga-20180404", strlen("fpga-20180404"));
+    }
+    return 0;
+}
+
+
+PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv)
+{
+    assert(websValid(wp));
+
+	if(!strcmp(argv[0],"vol")){
+        websWriteBlock(wp, "3.32V", strlen("3.32V"));
+    } else if(!strcmp(argv[0],"core")){
+        websWriteBlock(wp, "1.81V", strlen("1.81V"));
+    } else if(!strcmp(argv[0],"interface")) {
+        websWriteBlock(wp, "24.2V", strlen("24.2V"));
+    } else if(!strcmp(argv[0],"ddr")){
+        websWriteBlock(wp, "1.35V", strlen("1.35V"));
+    }
+	return 0;
+}
+
+PUBLIC int websJstGetThermal(int jid, Webs *wp, int argc, char **argv)
+{
+    assert(websValid(wp));
+    websWriteBlock(wp, "57C", strlen("57C"));
+	return 0;
+}
+
+/* -------------------------------------------------- */
 
 /*
     Find s2 in s1. We skip leading white space in s1.  Return a pointer to the location in s1 after s2 ends.
