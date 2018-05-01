@@ -9,6 +9,14 @@
 #include    "goahead.h"
 #include    "js.h"
 
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+
 #if ME_GOAHEAD_JAVASCRIPT
 /********************************** Locals ************************************/
 
@@ -218,6 +226,24 @@ PUBLIC int websJstWrite(int jid, Webs *wp, int argc, char **argv)
 }
 
 /* -------------------添加自己的jst------------------- */
+volatile unsigned int * map_base;
+
+void read_reg(void)
+{
+    int fd;
+    fd = open("/dev/mem", O_RDWR);
+    if(fd<0) {
+       printf("file open fail\n");
+    }
+    map_base = (unsigned int*)mmap(NULL, 0xff, PROT_READ|PROT_WRITE, MAP_SHARED, fd, ADC);
+    printf("map_base is %p \n", map_base);
+}
+
+unsigned int REG_READ_4byte(int offset)
+{
+	return *(map_base + offset);
+}
+
 PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv)
 {
     assert(websValid(wp));
@@ -239,14 +265,30 @@ PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv)
 {
     assert(websValid(wp));
 
-	if(!strcmp(argv[0],"vol")){
-        websWriteBlock(wp, "3.32V", strlen("3.32V"));
+    read_reg();
+    
+    unsigned int vcc_int = REG_READ_4byte(VCCINT);
+    unsigned int vcc_pint = REG_READ_4byte(VCCPINT);
+    unsigned int ddr = REG_READ_4byte(DDR);
+
+    float f_vcc_int = vcc_int/4096.0*3;
+    float f_vcc_pint = vcc_pint/4096.0*3;
+    float f_ddr = ddr/4096.0*3;
+
+    char s_vcc_int[16], s_vcc_pint[16], s_ddr[16];
+
+    sprintf(s_vcc_int, "%.4f", f_vcc_int);
+    sprintf(s_vcc_pint, "%.4f", f_vcc_pint);
+    sprintf(s_ddr, "%.4f", f_ddr);
+
+    if(!strcmp(argv[0],"vol")){
+        websWriteBlock(wp, s_vcc_int, strlen(s_vcc_int));
     } else if(!strcmp(argv[0],"core")){
-        websWriteBlock(wp, "1.81V", strlen("1.81V"));
+        websWriteBlock(wp, s_vcc_pint, strlen(s_vcc_pint));
     } else if(!strcmp(argv[0],"interface")) {
-        websWriteBlock(wp, "24.2V", strlen("24.2V"));
+        websWriteBlock(wp, "24.0V", strlen("24.0V"));
     } else if(!strcmp(argv[0],"ddr")){
-        websWriteBlock(wp, "1.35V", strlen("1.35V"));
+        websWriteBlock(wp, s_ddr, strlen(s_ddr));
     }
 	return 0;
 }
@@ -254,7 +296,16 @@ PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv)
 PUBLIC int websJstGetThermal(int jid, Webs *wp, int argc, char **argv)
 {
     assert(websValid(wp));
-    websWriteBlock(wp, "57C", strlen("57C"));
+    read_reg();
+    
+    unsigned int tmp = REG_READ_4byte(TEMP);
+    printf("++++++%x--\r\n", tmp); 
+
+    float temp = tmp*503.975/4096 - 273.15;
+    char  temp_s[64];
+    sprintf(temp_s, "%.2f", temp);
+
+    websWriteBlock(wp, temp_s, strlen(temp_s));
 	return 0;
 }
 

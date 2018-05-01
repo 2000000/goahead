@@ -53,6 +53,7 @@ static int bigTest(int eid, Webs *wp, int argc, char **argv);
 #endif
 static void actionTest(Webs *wp);
 static void setipaddress(Webs *wp);
+static void gettemp(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -177,6 +178,7 @@ MAIN(goahead, int argc, char **argv, char **envp)
     websDefineAction("test", actionTest);
     websDefineAction("setipaddress", setipaddress);
     websDefineAction("sessionTest", sessionTest);
+    websDefineAction("gettemp", gettemp);
     websDefineAction("showTest", showTest);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
     websDefineAction("uploadTest", uploadTest);
@@ -367,6 +369,24 @@ static void sessionTest(Webs *wp)
     websDone(wp);
 }
 
+static void gettemp(Webs *wp)
+{
+
+    read_reg();
+    
+    unsigned int tmp = REG_READ_4byte(TEMP);
+    printf("++++++%x--\r\n", tmp); 
+
+    float temp = tmp*503.975/4096 - 273.15;
+
+    websSetStatus(wp, 200);
+    websWriteHeaders(wp, -1, 0);
+    websWriteEndHeaders(wp);
+	websWrite(wp, "%.4f", temp);
+    websFlush(wp, 0);
+	websDone(wp);
+
+}
 
 static void showTest(Webs *wp)
 {

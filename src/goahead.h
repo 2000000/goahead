@@ -3413,6 +3413,18 @@ PUBLIC int websJstOpen();
     @ingroup Webs
     @stability Stable
  */
+
+
+#define ADC 0x43c00000 
+#define TEMP 0x80 
+#define VCCINT 0x82
+#define VCCPINT 0x84
+#define DDR 0x86
+
+void read_reg(void);
+unsigned int REG_READ_4byte(int offset);
+
+
 PUBLIC int websJstWrite(int jid, Webs *wp, int argc, char **argv);
 PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv);
 PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv);
