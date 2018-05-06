@@ -428,7 +428,7 @@ static void uploadTest(Webs *wp)
             websWrite(wp, "TYPE=%s\r\n", up->contentType);
             websWrite(wp, "SIZE=%d\r\n", up->size);
             //upfile = sfmt("%s/tmp/%s", websGetDocuments(), up->clientFilename);
-            //sd card root dir
+            //sd card root dir 
             upfile = sfmt("%s/../../%s", websGetDocuments(), up->clientFilename);
             printf("%s\r\n", upfile);
             if (rename(up->filename, upfile) < 0) {
