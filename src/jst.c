@@ -263,9 +263,9 @@ void  FPGA_write(unsigned int addr, unsigned int data)  //write data to all fpga
 	 
         PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
 
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x80);  //write bit7:contrl en; bit2-bit1:00(write all fpga)
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x89);  //write bit0:begin read or write
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x80);  //write bit0:begin read or write
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //write bit7:contrl en; bit2-bit1:00(write all fpga)
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x01);  //write bit0:begin read or write
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //write bit0:begin read or write
 
         PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
 }
@@ -280,19 +280,19 @@ unsigned char FPGA_read(unsigned int fpga_id, unsigned int addr)  //write data t
 
         PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
 
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x80);  //write bit7:contrl en; bit2-bit1:00(write all fpga)
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //write bit7:contrl en; bit2-bit1:00(write all fpga)
 
 
         switch (fpga_id) {                         //fpga0
 	case 0: 
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x82);  //write bit7:contrl en; bit 0: 0 bit2-bit1:01
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x83);  //write bit7:contrl en; bit 1: 0 bit2-bit1:01
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x82);  //write bit7:contrl en; bit 0: 0 bit2-bit1:01
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x02);  //write bit7:contrl en; bit 0: 0 bit2-bit1:01
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x03);  //write bit7:contrl en; bit 1: 0 bit2-bit1:01
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x02);  //write bit7:contrl en; bit 0: 0 bit2-bit1:01
         break;
        case 1:                                       //fpga1
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x84);  //write bit7:contrl en; bit 0: 0 bit2-bit1:10
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x85);  //write bit7:contrl en; bit 1: 0 bit2-bit1:10
-        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x84);  //write bit7:contrl en;bit 0: 0 bit2-bit1:10
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x04);  //write bit7:contrl en; bit 0: 0 bit2-bit1:10
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x05);  //write bit7:contrl en; bit 1: 0 bit2-bit1:10
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x04);  //write bit7:contrl en;bit 0: 0 bit2-bit1:10
         break;
 
        default:
