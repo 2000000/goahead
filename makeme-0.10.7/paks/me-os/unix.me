@@ -1,0 +1,43 @@
+/*
+    unix.me -- Generic Unix Settings
+ */
+
+Me.load({
+
+    ext: {
+        exe:   '',
+        lib:   'a',
+        o:     'o',
+        res:   'res',
+        shlib: 'so',
+        shobj: 'so',
+    },
+
+    'opt-prefixes': {
+        root:       '/',
+        base:       '${prefixes.root}/opt/${settings.name}',
+        data:       '${prefixes.root}/share',
+        state:      '${prefixes.root}/var',
+
+        bin:        '${prefixes.base}/bin',
+        inc:        '${prefixes.base}/include',
+        lib:        '${prefixes.base}/lib',
+        man:        '${prefixes.base}/share/man',
+        sbin:       '${prefixes.base}/sbin',
+
+        etc:        '${prefixes.root}/etc/${settings.name}',
+        web:        '${prefixes.data}/share/www/${settings.name}',
+
+        log:        '${prefixes.state}/logs',
+        spool:      '${prefixes.state}/spool',
+        cache:      '${prefixes.state}/cache',
+
+        app:        '${prefixes.base}/lib/${settings.name}',
+        vapp:       '${prefixes.app}',
+        src:        '${prefixes.data}/src/${settings.name}-${settings.version}',
+    },
+
+    configure: {
+        requires: [ 'compiler', 'lib' ],
+    },
+})

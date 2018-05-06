@@ -1,0 +1,19 @@
+/*
+    simple.me -- Configuration setup for stand-alone MakeMe files.
+ */
+
+Me.load({
+    targets: {
+        clean: {
+            action: "builtin('cleanTargets')",
+        },
+
+        compile: {
+            depends: ['all'],
+        },
+
+        rebuild: {
+            type: 'rebuild',
+        },
+    },
+})

@@ -1,0 +1,105 @@
+/*
+    ejscript.me -- Ejscript Component
+ */
+Me.load({
+    targets: {
+        ejscript: {
+            description: 'Ejscript Language',
+            config: function (target) {
+                if (me.targets.libejs) {
+                    return me.targets.ejscript
+                }
+                let ejs = Cmd.locate('ejs')
+                if (ejs.isLink) {
+                    ejs = ejs.dirname.join(ejs.linkTarget)
+                }
+                if (ejs) {
+                    ejs = ejs.dirname.parent
+                } else {
+                    if (me.platform.os == 'windows') {
+                        ejs = me.dir.programFiles32.join('Embedthis Ejscript')
+                    } else {
+                        ejs = '/usr/local/lib/ejscript/latest'
+                    }
+                }
+                if (me.options.gen) {
+                    return {
+                        path:     ejs,
+                        libpaths: [ ejs.join('bin') ],
+                        includes: [ ejs.join('inc') ],
+                    }
+                }
+                let search = [ ]
+                if (target.withpath) {
+                    search.push(target.withpath)
+                }
+                for (let d: Path = '.'; d.parent != d; d = d.parent) {
+                    let sp = d.join(me.platform.name)
+                    if (sp.join('bin/libejs.' + me.ext.shobj).exists) {
+                        search.push(sp)
+                        break
+                    }
+                }
+                search.push(ejs)
+                let path = probe('bin/libejs.' + me.ext.shobj, { search: search })
+                let bin = probe('libejs.' + me.ext.shobj, {fullpath: true, search: path.join('bin')}).dirname
+                if (me.platform.like == 'unix') {
+                    linker = [ '-Wl,-rpath,' + bin + '/' ]
+                }
+                return {
+                    path:       path,
+                    libpaths:  [ bin ],
+                    libraries: [ 'ejs', 'http', 'mpr', 'pcre' ],
+                    linker:    linker,
+                    includes:  [ probe('ejs.h', {search: path.join('inc')}) ],
+                }
+            }
+        }
+    }
+})
+
+public function ejsCompile(name: Path, ...files) {
+    if (name.extension != 'mod') {
+        name.joinExt('mod', true)
+    }
+    let ejsc: Path = App.getenv('EJSC') || Cmd.locate('ejsc')
+    let esettings = me.settings.ejscript
+    let options = esettings ? esettings.compile : ''
+    run(ejsc + ' --out ' + name + ' ' + options + ' ' + files.join(' '))
+    let ejsmod: Path = App.getenv('EJSMOD') || Cmd.locate('ejsmod')
+    run(ejsmod + ' --cslots ' + name)
+    trace('Compile', name)
+}
+
+
+public function ejsInstall(name: Path, version = null) {
+    if (name.extension == 'mod') {
+        name.trimExt('mod')
+    }
+    let src = name.joinExt('mod', true)
+    let ejsVersion = Cmd.run('ejsc -V').trim()
+    cache = App.home.join('.ejs').join('ejscript', ejsVersion)
+    if (!version) {
+        // let package = me.dir.paks.join(name, 'package.json')
+        let package = Path('package.json')
+        if (package.exists) {
+            version = package.readJSON().version
+        }
+        if (!version) {
+            throw 'Cannot determine package version to install: ' + name
+        }
+    }
+    let dest = cache.join(name + '#' + version + '.mod')
+    if (src.modified > dest.modified) {
+        trace('Install', dest)
+        cache.makeDir()
+        src.copy(dest)
+    }
+    src = Path('lib' + name + '.' + me.ext.shobj)
+    dest = cache.join('lib' + name + '#' + version + '.' + me.ext.shobj)
+    if (src.modified > dest.modified) {
+        trace('Install', dest)
+        cache.makeDir()
+        src.copy(dest)
+    }
+}

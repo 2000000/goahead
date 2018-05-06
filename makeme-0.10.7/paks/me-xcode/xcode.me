@@ -1,0 +1,18 @@
+/*
+    xcode.me - MakeMe Project Generator Plugin
+ */
+
+Me.load({ 
+    scripts: {
+        generator: `
+            require embedthis.me
+            load('${ORIGIN}/Xcode.es')
+            var xcode = Xcode()
+            makeme.generators.xcode = {
+                project: function(base) {
+                    xcode.generate(base)
+                }
+            }
+        `
+    }
+})

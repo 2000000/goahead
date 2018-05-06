@@ -3421,6 +3421,15 @@ PUBLIC int websJstOpen();
 #define VCCPINT 0x84
 #define DDR 0x86
 
+#define ADDR_FPGA_config      0x050
+#define ADDR_FPGA_cfg_ctl     0x051
+#define ADDR_FPGA_cfg_state   0x052
+#define ADDR_FPGA_config_dat  0x053
+#define ADDR_FPGA_rw_ctrl     0x054
+#define ADDR_FPGA_rw_addr     0x055
+#define ADDR_FPGA_wr_data     0x056
+#define ADDR_FPGA_rd_data     0x057
+
 void read_reg(void);
 unsigned int REG_READ_4byte(int offset);
 

@@ -183,6 +183,7 @@ static void closeJst()
 
 PUBLIC int websJstOpen()
 {
+    read_reg();
     websJstFunctions = hashCreate(WEBS_HASH_INIT * 2);
     websDefineJst("write", websJstWrite);
     websDefineJst("readVer", websJstReadVer);
@@ -236,7 +237,7 @@ void read_reg(void)
        printf("file open fail\n");
     }
     map_base = (unsigned int*)mmap(NULL, 0xff, PROT_READ|PROT_WRITE, MAP_SHARED, fd, ADC);
-    printf("map_base is %p \n", map_base);
+    //printf("map_base is %p \n", map_base);
 }
 
 unsigned int REG_READ_4byte(int offset)
@@ -244,18 +245,125 @@ unsigned int REG_READ_4byte(int offset)
 	return *(map_base + offset);
 }
 
+unsigned int PL_REG_READ(int offset)
+{
+	return *(map_base + offset);
+}
+
+
+void PL_REG_WRITE(unsigned int addr, unsigned int value)
+{
+	*(map_base + addr) = value;
+}
+
+void  FPGA_write(unsigned int addr, unsigned int data)  //write data to all fpga
+{      
+        PL_REG_WRITE(ADDR_FPGA_rw_addr,addr);  //write the fpga addr to point in the pl
+        PL_REG_WRITE(ADDR_FPGA_wr_data,data);  //write the data to bus in the pl
+	 
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
+
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x80);  //write bit7:contrl en; bit2-bit1:00(write all fpga)
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x89);  //write bit0:begin read or write
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x80);  //write bit0:begin read or write
+
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
+}
+
+
+unsigned char FPGA_read(unsigned int fpga_id, unsigned int addr)  //write data to all fpga
+{      
+     unsigned char data_read_from_fpga;
+
+        PL_REG_WRITE(ADDR_FPGA_rw_addr,addr);  //write the fpga addr to point in the pl
+        
+
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
+
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x80);  //write bit7:contrl en; bit2-bit1:00(write all fpga)
+
+
+        switch (fpga_id) {                         //fpga0
+	case 0: 
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x82);  //write bit7:contrl en; bit 0: 0 bit2-bit1:01
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x83);  //write bit7:contrl en; bit 1: 0 bit2-bit1:01
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x82);  //write bit7:contrl en; bit 0: 0 bit2-bit1:01
+        break;
+       case 1:                                       //fpga1
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x84);  //write bit7:contrl en; bit 0: 0 bit2-bit1:10
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x85);  //write bit7:contrl en; bit 1: 0 bit2-bit1:10
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x84);  //write bit7:contrl en;bit 0: 0 bit2-bit1:10
+        break;
+
+       default:
+		break;
+        }
+        
+        data_read_from_fpga = PL_REG_READ(ADDR_FPGA_rd_data);   //low 8 bit 
+        PL_REG_WRITE(ADDR_FPGA_rw_ctrl,0x00);  //normal
+	return data_read_from_fpga;
+}
+
+
+
+
+unsigned char FPGA_id_read(unsigned int fpga_id)  //used for judge whether the fpga is mount
+{      
+   return FPGA_read(fpga_id, 0x00);   
+}
+
+
+
+unsigned int FPGA_ver_read(unsigned int fpga_id)  //used for judge whether the fpga is mount
+{      
+   unsigned char byte1,byte2,byte3,byte4;
+
+   byte1 = FPGA_read(fpga_id, 0x01); //high
+   byte2 = FPGA_read(fpga_id, 0x02);
+   byte3 = FPGA_read(fpga_id, 0x03);
+   byte4 = FPGA_read(fpga_id, 0x04); //low
+
+   return (byte1<<24 | byte2<<16 | byte3<<8 | byte4);
+
+}
+
+
+unsigned int FPGA_date_read(unsigned int fpga_id)  //used for judge whether the fpga is mount
+{      
+   unsigned char byte1,byte2,byte3,byte4;
+
+   byte1 = FPGA_read(fpga_id, 0x05); //high
+   byte2 = FPGA_read(fpga_id, 0x06);
+   byte3 = FPGA_read(fpga_id, 0x07);
+   byte4 = FPGA_read(fpga_id, 0x08); //low
+
+   return (byte1<<24 | byte2<<16 | byte3<<8 | byte4);
+   
+}
+
+
 PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv)
 {
     assert(websValid(wp));
-    printf("---%s---\n", argv[0]);
-    if(!strcmp(argv[0],"boot")){
-        websWriteBlock(wp, "u-boot201803", strlen("u-boot201803"));
+
+    char tmp[32];	
+    unsigned int zynq_ver = REG_READ_4byte(0x00);
+    unsigned int fpga0_ver = FPGA_ver_read(0);
+    unsigned int fpga1_ver = FPGA_ver_read(1);
+
+    
+
+    if(!strcmp(argv[0],"fpga1")){
+        sprintf(tmp, "%08X", fpga0_ver);
+        websWriteBlock(wp, tmp, strlen(tmp));
     } else if(!strcmp(argv[0],"zynq")){
-        websWriteBlock(wp, "zynq-v20180415", strlen("zynq-v20180415"));
+        sprintf(tmp, "%08X", zynq_ver);
+        websWriteBlock(wp, tmp, strlen(tmp));
     } else if(!strcmp(argv[0],"linux")) {
         websWriteBlock(wp, "kernel-4.14", strlen("kernel-4.14"));
-    } else if(!strcmp(argv[0],"fpga")){
-        websWriteBlock(wp, "fpga-20180404", strlen("fpga-20180404"));
+    } else if(!strcmp(argv[0],"fpga0")){
+        sprintf(tmp, "%08X", fpga1_ver);
+        websWriteBlock(wp, tmp, strlen(tmp));
     }
     return 0;
 }
@@ -265,7 +373,6 @@ PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv)
 {
     assert(websValid(wp));
 
-    read_reg();
     
     unsigned int vcc_int = REG_READ_4byte(VCCINT);
     unsigned int vcc_pint = REG_READ_4byte(VCCPINT);
@@ -277,9 +384,9 @@ PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv)
 
     char s_vcc_int[16], s_vcc_pint[16], s_ddr[16];
 
-    sprintf(s_vcc_int, "%.4f", f_vcc_int);
-    sprintf(s_vcc_pint, "%.4f", f_vcc_pint);
-    sprintf(s_ddr, "%.4f", f_ddr);
+    sprintf(s_vcc_int, "%.2f", f_vcc_int);
+    sprintf(s_vcc_pint, "%.2f", f_vcc_pint);
+    sprintf(s_ddr, "%.2f", f_ddr);
 
     if(!strcmp(argv[0],"vol")){
         websWriteBlock(wp, s_vcc_int, strlen(s_vcc_int));
@@ -296,10 +403,9 @@ PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv)
 PUBLIC int websJstGetThermal(int jid, Webs *wp, int argc, char **argv)
 {
     assert(websValid(wp));
-    read_reg();
     
     unsigned int tmp = REG_READ_4byte(TEMP);
-    printf("++++++%x--\r\n", tmp); 
+    //printf("++++++%x--\r\n", tmp); 
 
     float temp = tmp*503.975/4096 - 273.15;
     char  temp_s[64];

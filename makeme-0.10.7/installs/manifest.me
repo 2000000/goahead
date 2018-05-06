@@ -1,0 +1,155 @@
+/*
+    manifest.me - MakeMe file for MakeMe Manifest 
+ */
+
+Me.load({
+    /*
+        Package manifest instructions
+
+        The sets used are: binary, service, test, doc, dev, package, source
+     */
+    manifest: {
+        home: me.dir.bin,
+        root: false,
+        packages:   {
+            install: {
+                inherit:    'package-manifest',
+                prefixes:   [ 'root', 'app', 'vapp', 'bin', 'inc', 'man'],
+                sets:       [ 'core', 'libs', 'doc' ],
+                platforms:  [ 'windows', 'unix' ]
+            },
+            binary: {
+                inherit:    'package-manifest',
+                prefixes:   [ 'root', 'app', 'vapp', 'bin', 'inc', 'man'],
+                formats:    [ 'native', 'tar' ],
+                sets:       [ 'core', 'libs', 'doc', 'package' ],
+                platforms:  [ 'freebsd', 'linux', 'windows', 'macosx' ]
+            },
+            source: {
+                inherit:    'package-manifest',
+                prefixes:   [ 'root', 'src'],
+                formats:    [ 'tar' ],
+                sets:       [ 'source' ],
+            },
+        },
+
+        sets: { 
+            core: [
+                {
+                    mkdir:      [ '${man}/man1' ],
+                    permissions: 0755,
+
+                }, {   
+                    from:   [
+                                'me${EXE}',
+                                'testme${EXE}',
+                                'makeme-ejs${EXE}',
+                                'makeme-ejsc${EXE}',
+                    ],
+                    to:         '${abin}/',
+                    symlink:    '${bin}/',
+                    permissions: 0755,     
+
+                }, {
+                    from: [
+                                'http${EXE}',
+                                'vcvars.bat',
+                    ],
+                    to:         '${abin}/',
+                    symlink:    '${bin}/',
+                    permissions: 0755,     
+                }
+            ],
+            libs: [
+                { 
+                    from: [
+                                'libejs${SHOBJ}',
+                                'libhttp${SHOBJ}',
+                                'libmpr${SHOBJ}',
+                                'libpcre${SHOBJ}',
+                                'libzlib${SHOBJ}',
+                    ],
+                    to:         '${abin}/',
+                    enable:     '!me.settings.static',
+
+                }, { from: [
+                                '${BIN}/roots.crt',
+                                'ejs.mod',
+                                'me.mod',
+                                'testme.mod',
+                                'ejs.testme.mod',
+                    ],
+                    to:         '${abin}/',
+
+                }, { 
+                    from:       '${TOP}/src/tm/testme.h',
+                    to:         '${vapp}/inc/',
+
+                }, {
+                    home:       '${TOP}/src',
+                    from:       [
+                                '*.me',
+                                'Configure.es',
+                                'Generate.es',
+                    ],
+                    to:         '${abin}/',
+                    flatten:    false,
+                
+                }, {
+                    home:       '${TOP}',
+                    from:       [
+                                'paks/me-components/',
+                                'paks/me-installs/',
+                                'paks/me-make/',
+                                'paks/me-os/',
+                                'paks/me-vstudio/',
+                                'paks/me-xcode/',
+                    ],
+                    to:         '${abin}/',
+                    flatten:    false,
+                }
+            ],
+            doc: [
+                { 
+                    from: [
+                                '${TOP}/doc/dist/man/me.1',
+                                '${TOP}/doc/dist/man/testme.1',
+                    ],
+                    to:         '${adoc}/man/man1/',
+                    symlink:    '${man}/man1/',
+                    enable:     "me.platform.like == 'unix'",
+                }
+            ],
+            source: [
+                { 
+                    from:       '${TOP}/*.md',
+                    to:         '${src}/',
+                    fold:       true,
+                    patch:      true,
+
+                }, { 
+                    from:       '${TOP}/configure',
+                    to:         '${src}/',
+                    permissions: 0755,     
+
+                }, { 
+                    home:       '${TOP}',
+                    from: [ 
+                                'Makefile', 
+                                'make.bat', 
+                                'main.me', 
+                                'package.json',
+                                'paks', 
+                                'src', 
+                                'doc', 
+                                'projects', 
+                                'installs'
+                    ],
+                    exclude:    /\.old$|\.tmp$|xcuserdata|xcworkspace|project.guid|-mine/,
+                    to:         '${src}/',
+                    flatten:    false,
+                },
+            ],
+        }
+    },
+})

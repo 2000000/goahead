@@ -1,0 +1,136 @@
+/*
+    main.me -- Main MakeMe file
+ */
+
+Me.load({
+    plugins: [ 'installs' ],
+
+    blend: [
+        'src/*/*.me',
+        'doc/doc.me',
+    ],
+
+    configure: {
+        requires:  [ 'osdep', 'ejscript', 'mpr', 'http', 'pcre', 'zlib' ],
+        discovers: [ 'ssl' ],
+    },
+
+    customize: [
+        /*
+            The optional custom.me file is loaded after main.me is fully processed. It can
+            thus override any setting. Feel free to create and customize.
+         */
+        'custom.me',
+    ],
+
+    settings: {
+        platforms: [ 'local' ],
+        tune: 'size',
+        integrate: true,
+
+        ejscript: {
+            compile: '--debug',
+            db: true,
+            mail: true,
+            mapper: true,
+            shell: true,
+            tar: true,
+            template: true,
+            web: true,
+            zlib: true,
+        },
+
+        http: {
+            /* Use PAM (Plugable Authentication Module) to store passwords */
+            cmd: true,
+            pam: false,
+        },
+
+        mpr: {
+            /*
+                Enable logging via mprLog to the log file. Error messages are always enabled.
+                The default is to enable logging for both debug and release builds.
+             */
+            logging: true,
+        },
+
+        tune: 'speed',
+
+        prefixes: 'install-prefixes',
+        manifest: 'installs/manifest.me',
+    },
+
+    targets: {
+        'me.mod': {
+            path: '${BIN}/me.mod',
+            files: [
+                'src/Builder.es',
+                'src/Loader.es',
+                'src/MakeMe.es',
+                'src/Me.es',
+                'src/Script.es',
+                'src/Target.es',
+                'paks/ejs.version/Version.es'
+            ],
+            precious: true,
+            build: `
+                run('"${LBIN}/makeme-ejsc" ${settings.ejscript.compile} --out "${BIN}/me.mod" --optimize 9 ${FILES}')
+            `,
+            message: 'Compile: me.mod',
+            depends: [ 'ejs.mod' ],
+        },
+
+        me: {
+            type: 'exe',
+            path: '${BIN}/me${EXE}',
+            sources: [ 'src/*.c' ],
+            active: true,
+            precious: true,
+            depends: [ 'libmpr', 'libhttp', 'libejs', 'me.mod', 'runtime' ],
+        },
+
+        pakrun: {
+            type: 'file',
+            path: '${BIN}/',
+            files: [ 'paks/me-*/**', '!**/*.md', '!**/package.json' ],
+            flatten: false,
+            precious: true,
+        },
+
+        extras: {
+            type: 'file',
+            path: '${BIN}/',
+            files: [ 'src/Configure.es', 'src/Generate.es', 'src/vcvars.bat' ],
+            flatten: true,
+            precious: true,
+        },
+
+        runtime: {
+            type: 'file',
+            path: '${BIN}/',
+            home: 'src',
+            files: '*.me',
+            precious: true,
+            depends: [ 'pakrun' ],
+        },
+
+        projects: {
+            action: `
+                genProjects('', 'default', ['freebsd-x86', 'linux-x86', 'macosx-x64', 'windows-x86'])
+            `,
+        },
+
+
+        publish: {
+            action: `publish()`,
+        },
+
+        mine: {
+            action: `
+                genProjects('', 'mine', Config.OS + '-' + Config.CPU)`,
+        },
+    },
+})
+
+
+

@@ -1,0 +1,18 @@
+{
+    "name": "makemedoc",
+    "title": "Embedthis MakeMe Documentation",
+    "description": "Embedthis MakeMe -- Fast, modern replacement for make and autoconf.",
+    "dependencies": {
+        "me-docstyle": "~0.9"
+    },
+    "devDependencies": {
+        "expansive": ">=0.6.0"
+    },
+    "directories": {
+        "export": "contents/lib"
+    },
+    "pak": {
+        "mode": "debug",
+        "import": true
+    }
+}

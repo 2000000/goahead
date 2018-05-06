@@ -1,0 +1,165 @@
+{
+    title:  'Configuring',
+    crumbs: [
+        { "User's Guide": 'index.html' },
+    ],
+}
+        <h2>Running Configure</h2>
+        <p>If your project has been designed for configuring, it will have a <em>main.me</em> file
+        that describes the project, what it requires to build, and which configurable components it can utilize.</p>
+        <p>For configurable products, developers typically provide a configure script to mimic the familiar autoconf 
+        configure pattern. This script minimally invokes MakeMe using the configure target:
+        <pre class="ui code segment">
+# configure script
+me configure "$@"</pre>
+        <p>MakeMe can also be invoked directly to configure your project:</p>
+        <ul>
+            <li>me configure</li>
+            <li>me -configure .</li>
+        </ul>
+        <p>Note that MakeMe switches can be prefixed with either a double "<em>--</em>" or a single "<em>-</em>" dashes.</p>
+
+        <h2>Configuration Outputs</h2>
+        <p>When configuring, MakeMe will determine the capabilities of your system and create a several files and 
+        directories. These include:</p>
+        <ul>
+            <li>A startup MakeMe file: <em>start.me</em></li>
+            <li>A platform output directory for objects, libraries and executables: <em>build/OS-ARCH-PROFILE</em></li>
+            <li>A platform specific MakeMe file: <em>build/OS-ARCH-PROFILE/platform.me</em></li>
+            <li>A source definitions header: <em>me.h</em></li>
+        </ul>
+        <p>MakeMe will use these files and output directory when performing subsequent builds and compiling sources.</p>
+        <p>The <em>start.me</em> file is the primary MakeMe file that is invoked when MakeMe is run. For configured
+        projects, this simply loads the platform.me file which in turn loads the main.me file.</p>
+        <a name="customizing"></a>
+        <h2>Customizing the Build</h2>
+        <p>When running "me configure", you can select or deselect configurable components and 
+            enable or disable various features.</p> 
+
+        <p>To see a list of supported components, run <em>configure --help</em>.</p>
+        <pre class="ui code segment">$ <b>configure --help</b>
+Usage: me [options] [targets|actions] ...
+...
+Components (--with NAME, --without NAME):
+    est                 # Embedded Security Transport (SSL)
+    openssl             # OpenSSL (SSL)
+    sqlite              # SQLite Database
+    zip                 # Zip Compression Tool
+</pre>
+        <p>If a discoverable component is installed in a non-standard location, you may need to inform MakeMe of its 
+       whereabouts. Do this via: <pre class="ui code segment">configure --with NAME=/path/to/component</pre>
+        <p>Some components that are neither required nor discoverable, may still supported by your project.
+           These components but must be explicitly requested via the <em>-with</em> switch for them to be configured. 
+           For example, Appweb supports Ejscript but it is not enabled by default. To build with Ejscript, you request it like this:</p>
+        <pre class="ui code segment">configure -with ejs</pre>
+        <p>You can explicitly disable a component  that has been discovered on your system, via the 
+        <em>-without</em> switch
+        <pre class="ui code segment">configure -without ssl</pre>
+        
+        <h3>Features</h3>
+        <p>Most projects have configurable options that can be tailored via the configure <em>--set</em> switch. This takes
+the form <em>--set KEY=VALUE</em>. For example:
+        <pre class="ui code segment">configure --set mpr.tracing=false</pre>
+        <p>To enable a feature, set it to true or 1. To disable, set to false or 0. The <em>configure --help</em> command
+        will list the features that can be selected.</p>
+        
+        <h3>Installation Prefixes</h3>
+        <p>MakeMe projects typically define a <em>prefixes</em> collection that define where the various pieces of the
+        application will be installed. To override where the project will be installed, use the <em>--prefix</em> configure
+        option. For example:</p>
+        <pre class="ui code segment">configure --prefix base=/opt</pre>
+        <p>This will cause the project to be installed under <em>/opt</em> instead of the usual location (/usr/local).</p>
+        
+        <p>To display the current installation prefixes, type:</p>
+        <pre class="ui code segment">$ <b>me --get prefixes</b>
+{
+    root: "/",
+    base: "/usr/local",
+    data: "/",
+    state: "/var",
+    app: "/usr/local/lib/makeme",
+    vapp: "/usr/local/lib/makeme/0.5.4",
+    bin: "/usr/local/bin",
+    inc: "/usr/local/include",
+    lib: "/usr/local/lib",
+    man: "/usr/local/share/man",
+    sbin: "/usr/local/sbin",
+    etc: "/etc/makeme",
+    web: "/var/www/makeme-default",
+    log: "/var/log/makeme",
+    spool: "/var/spool/makeme",
+    cache: "/var/spool/makeme/cache",
+}
+</pre>
+        <p>Depending on the project and target system, the installation prefixes may vary.</p>
+        <p>For those familiar with autoconf, the major autoconf prefix switches are supported by MakeMe.</p>
+        <a name="outside"></a>
+        <h2>Outside Source Tree Builds</h2>
+        <p>MakeMe supports building from read-only source trees. To do this, use <em>me -config path</em> when
+        configuring. Run this from a writable directory and reference the read-only source tree via the
+        <em>-config</em> switch. MakeMe will create the start.me, platform output directory and the platform.me file.
+        Thereafter run <em>me</em> from the writable directory for all operations.</p>
+
+        <a name="cross"></a>
+        <h2>Configuring for Cross-Compiling</h2>
+        <p>To build a product for platform different to that of the local system is called <em>cross compiling</em>. Sometimes this compiling is just for a different instruction set (say x64 instead of x86). Other times it is for a completely different operating system and/or CPU architecture.</p>
+
+        <p>MakeMe supports cross compiling via the <em>configure --platform OS-ARCH-PROFILE</em> option. This adds a platform to the list of platforms to be made when building. Multiple platforms may be specified and the <em>local</em> platform alias may be used for the local development platform.</p>
+
+        <p>The ARCH component may be a specific CPU to tune for rather than an CPU family.  For example:</p>
+        <code>me --platform vxworks-arm7tdmi-debug -configure .
+me --platform vxworks-x86sim</code>
+
+        <p>This will create a vxworks-arm/platform.me configuration file and a <em>start.me</em> that references it. The platform switch does not need to be restated after configuration and will be ignored.</p>
+
+        <p>Note the configuration options apply to the preceding platform. If no preceding platform, the option applies to the local platform. For example:</p>
+        <code>configure -with ejscript -platform linux-arm-debug -without ejscript</code>
+        <p>This will build with the Ejscript package for the local development system, and without Ejscript for the target.</p>
+
+        <p>Some products require local building to make the tools that are required to build for a target platform. This necessitates two build passes: one for the local system and one for the target. These products add a <em>platforms: ['local']</em> property to their <em>settings</em> collection in the <em>main.me</em> file. This automatically adds the local platform to the platforms list and is the same as adding <em>--platform local</em> on the command line when configuring.</p>
+
+        <h3>Building 32-bit Applications</h3>
+        <p>If your local system can execute binaries for the specified platform, MakeMe will suppress adding an extra pass for the local system. For example: if you want to build a Windows 32-bit application on a Windows 64-bit system, you can specify <em>--platform windows-x86</em>. MakeMe will realize that your system can also execute 32-bit binaries and will suppress also building for 64-bit.</p>
+
+        <h3>Environment Variables</h3>
+        <p>When compiling, you may need to inform <b>configure</b> about your cross-compilation tool chain and where it is located.  MakeMe will do its best to discover the installed SDKs and cross tool chain and will look in well known directories to locate the compiler, linker, libraries and other required tools. If <em>me</em> cannot locate the tool chain, you can supply the tool chain details via environment variables.</p>
+
+        <p>MakeMe has default command paths and command flags for the compiler, linker and other tools. These can be overridden by providing environment variables containing alternate flags to use.</p>
+        <p>Use the variables AR, CC and LD to specify the path to the archiver, compiler and linker tools. Use CFLAGS to provide compiler flags, DFLAGS for pre-processor definitions, IFLAGS for compiler include paths and LDFLAGS for linker flags.</p>
+        <p>If these flags are provided to MakeMe when building, they apply to that run only. If the flags are provide when configuring, they are saved in the generated platform build file and apply to all subsequent runs. For example:</p>
+        <code>CC=/path/to/compiler CFLAGS=-w me configure</code>
+
+        <h3>Specifying Compiler and SDK Versions</h3>
+        <p>By default, MakeMe will use the latest version of a compiler to build an application. However, when building for Windows or VxWorks, you can force MakeMe to use a specific version of Visual Studio or VxWorks by setting the VSINSTALLDIR and WIND_BASE environment variables.</p>
+
+        <p>For example: if you have Visual Studio 2013 (12) and Visual Studio 2015 (14) installed, you can force MakeMe to build with Visual Studio 2013 by setting the <em>VSINSTALLDIR</em> environment variable. Note: this variable is defined by the Visual Studio <em>vcvarsall.bat</em> script.</p>
+
+        <code>VSINSTALLDIR="c:/Program Files/Microsoft Visual Studio 12.0" ./configure</code>
+
+        <p>To build with a specific version of WindRiver VxWorks, use the <em>WIND_BASE</em> environment variable. Note: this variable is defined by the WindRiver <em>wrenv.sh</em> script.</p>
+
+        <code>WIND_BASE="Z:/WindRiver/vxworks-x86" ./configure --platform vxworks-x86</code>
+
+        <a name="useful"></a>
+        <h2>Useful Configure Commands</h2>
+        <p>Show commands as they are executed:</p>
+        <pre class="ui code segment">me --show</pre>
+
+        <p>To dump the entire configuration into a single MakeMe file. This is great for debugging.</p>
+        <pre class="ui code segment">me dump</pre>
+
+        <p>To learn more, read about <a href="debugging.html">Debugging a Build</a>.</p>
+        <a name="customize-me"></a> 
+
+        <h2>Customize.me</h2>
+        <p>Instead of manually specifying settings to configure, you can create a <em>customize.me</em> file that 
+        will be loaded after the <em>main.me</em> and all referenced MakeMe files are fully loaded. 
+        The customize.me file can thus override any prior
+        MakeMe setting. Projects should not ship this file and so
+        users need not fear their customize.me file will be overwritten.</p>
+        <pre class="ui code segment">
+{
+    customize: [
+        'custom.me'
+    ]
+}</pre>

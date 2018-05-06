@@ -375,14 +375,14 @@ static void gettemp(Webs *wp)
     read_reg();
     
     unsigned int tmp = REG_READ_4byte(TEMP);
-    printf("++++++%x--\r\n", tmp); 
+    //printf("++++++%x--\r\n", tmp); 
 
     float temp = tmp*503.975/4096 - 273.15;
 
     websSetStatus(wp, 200);
     websWriteHeaders(wp, -1, 0);
     websWriteEndHeaders(wp);
-	websWrite(wp, "%.4f", temp);
+	websWrite(wp, "%.2f", temp);
     websFlush(wp, 0);
 	websDone(wp);
 
@@ -427,7 +427,10 @@ static void uploadTest(Webs *wp)
             websWrite(wp, "CLIENT=%s\r\n", up->clientFilename);
             websWrite(wp, "TYPE=%s\r\n", up->contentType);
             websWrite(wp, "SIZE=%d\r\n", up->size);
-            upfile = sfmt("%s/tmp/%s", websGetDocuments(), up->clientFilename);
+            //upfile = sfmt("%s/tmp/%s", websGetDocuments(), up->clientFilename);
+            //sd card root dir
+            upfile = sfmt("%s/../../%s", websGetDocuments(), up->clientFilename);
+            printf("%s\r\n", upfile);
             if (rename(up->filename, upfile) < 0) {
                 error("Cannot rename uploaded file: %s to %s, errno %d", up->filename, upfile, errno);
             }

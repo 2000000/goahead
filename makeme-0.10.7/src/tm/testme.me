@@ -1,0 +1,51 @@
+/*
+    testme.me -- MakeMe file for testme
+ */
+
+Me.load({
+    targets: {
+        testme: {
+            type: 'exe',
+            path: '${BIN}/testme${EXE}',
+            sources: [ 'testme.c' ],
+            headers: [ '*.h' ],
+            static: false,
+            active: true,
+            depends: [ 'libejs', 'testme.mod', 'ejs.testme.mod' ],
+        },
+
+        'testme.es': {
+            type: 'file',
+            path: '${BIN}/testme.es',
+            files: [ 'testme.es' ],
+            platforms: [ 'local' ],
+        },
+
+        'testme.mod': {
+            path: '${BIN}/testme.mod',
+            files: [ 'testme.es' ],
+            build: `
+                run('"${LBIN}/makeme-ejsc" ${settings.ejscript.compile} --out "${BIN}/testme.mod" --optimize 9 testme.es')
+            `,
+            message: 'Compile: testme.mod',
+            depends: [ 'ejs.mod' ],
+        },
+
+        'ejs.testme.es': {
+            type: 'file'
+            path: '${BIN}/ejs.testme.es',
+            files: [ 'ejs.testme.es' ],
+            platforms: [ 'local' ],
+        },
+
+        'ejs.testme.mod': {
+            path: '${BIN}/ejs.testme.mod',
+            files: [ 'ejs.testme.es' ],
+            build: `
+                run('"${LBIN}/makeme-ejsc" ${settings.ejscript.compile} --out "${BIN}/ejs.testme.mod" --optimize 9 ejs.testme.es')
+            `,
+            message: 'Compile: ejs.testme.mod',
+            depends: [ 'ejs.mod' ],
+        },
+    },
+})

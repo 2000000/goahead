@@ -1,0 +1,709 @@
+/*
+    compiler.me - Compiler Component
+ */
+Me.load({
+    targets: {
+        compiler: {
+            description: 'C/C++ Compiler',
+            loaded: true,
+            enable: true,
+            config: function (target) {
+                let results = {}, settings
+                if (me.options.gen) {
+                    if (me.platform.like == 'windows') {
+                        results.path = 'cl'
+                    } else if (me.platform.os == 'macosx') {
+                        results.path = 'clang'
+                    } else if (me.platform.os == 'vxworks') {
+                        results.path = 'cc$(subst x86,pentium,$(ARCH))'
+                    } else {
+                        results.path = 'gcc'
+                    }
+                    settings = getDefaultSettings()
+                } else {
+                    if (me.platform.like == 'windows') {
+                        findWindowsCompiler(results)
+
+                    } else if (me.platform.os == 'vxworks') {
+                        findVxCompiler(results)
+
+                    } else {
+                        findPosixCompiler(results)
+                    }
+                    if (!me.options.configure) {
+                        /* For stand-alone use */
+                        settings = getDefaultSettings()
+                    } else {
+                        settings = getCompilerSettings(results.path)
+                    }
+                }
+                setCompilerOptions(results, settings)
+                return results
+            },
+            discovers: [ 'vxworks' ],
+        }
+    }
+})
+
+
+function sortVersions(list, i, j)
+{
+    let v1: Number = list[i].replace(/.*Studio (.*).VC.*/, '$1')
+    let v2: Number = list[j].replace(/.*Studio (.*).VC.*/, '$1')
+    if (v1 < v2) {
+        return -1
+    } else if (v1 > v2) {
+        return 1
+    }
+    return 0
+}
+
+
+function findWindowsCompiler(results) {
+    let search
+    let vsdir: Path?
+    let vcvars: Path?
+    let path: Path? = me.targets.compiler.withpath
+    let env = {}
+    let version = 0
+
+    /*
+        May come here when cross generating
+     */
+    if (Config.OS != 'windows') {
+        path = 'cl.exe'
+        vsdir = Path('$(VS)')
+    } else {
+        /*
+            The VS bin+lib directories contain 32 bit compilers and libraries
+            The native VS 64 bit versions are under bin/amd64 and lib/x64
+            The cross compile for 64 bit on 32 bit systems is under bin/x86_64 and lib/x64
+            The cross compile for 32 bit on 64 bit systems can use the default 32 bit bin + lib
+            See: http://msdn.microsoft.com/en-us/library/x4d2c09s(v=vs.80).aspx
+            Also: http://blogs.msdn.com/b/david.wang/archive/2006/03/26/howto-detect-process-bitness.aspx
+            Note: With VS 2013 (12), MS removed the 64 bit compilers from the express editions.
+         */
+        if (path) {
+            vsdir = path.name.match(/.*Visual Studio \d*.\d/)[0]
+        }
+        if (!vsdir) {
+            vsdir = App.getenv('VSINSTALLDIR')
+        }
+        if (vsdir) {
+            vcvars = vsdir.join('VC/vcvarsall.bat')
+        } else {
+            let pf = me.dir.programFiles32
+            for (v = 2030; v >= 2017; v--) {
+                let comdir = pf.join('Microsoft Visual Studio', v, 'Community')
+                if (comdir.exists) {
+                    vcvars = comdir.join('VC/Auxiliary/Build/vcvarsall.bat')
+                    if (vcvars.exists) {
+                        version = '15.0'
+                        break
+                    }
+                }
+            }
+            if (!vcvars.exists) {
+                for each (v in [14, 13, 12, 11, 10, 9]) {
+                    vcvars = pf.join('Microsoft Visual Studio ' + v + '.0/VC/vcvarsall.bat')
+                    if (vcvars.exists) {
+                        break
+                    }
+                    vcvars = null
+                }
+            }
+            if (vcvars) {
+                vsdir = vcvars.parent.parent
+            }
+        }
+        if (!vcvars || !vcvars.exists) {
+            throw 'Cannot find Visual Studio installation'
+        }
+        let cmd = new Cmd
+        let arch = me.platform.arch
+        if (arch == 'x64') {
+            arch = (Config.CPU == 'x86') ? 'x86_amd64' : 'amd64'
+        } else if (arch == 'x86') {
+            arch = (Config.CPU == 'x64') ? 'amd64_x86' : 'x86'
+        } else if (arch == 'arm') {
+            arch = (Config.CPU == 'x86') ? 'x86_arm' : 'amd64_arm'
+        } else {
+            throw 'Unsupported architecture ' + arch
+        }
+        cmd.start([me.dir.me.join('vcvars.bat'), vcvars, arch])
+        let required = {
+            'LIB': true,
+            'INCLUDE': true,
+            'PATH': true,
+            'VSINSTALLDIR': true,
+            'WindowsSdkDir': true,
+            'WindowsSdkLibVersion': true,
+        }
+        for each (line in cmd.readLines()) {
+            let [key,value] = line.split('=')
+            if (required[key]) {
+                env[key] = value
+            }
+        }
+        search = env.PATH.split(';').map(function(e) Path(e))
+
+        path ||= probe(path || 'cl.exe', {fullpath: true, search: search})
+    }
+    version ||= vsdir.name.match(/\d*\.\d/)[0]
+    let cver = version.replace('.', '')
+    let crt = vsdir.join('VC/redist', me.platform.arch, 
+        'Microsoft.VC' + cver + '.CRT', (version < 14 ? 'msvcr' : 'vcruntime') + cver + '.dll')
+
+    blend(results, {
+        path: path,
+        env: env,
+        search: search,
+        vsdir: vsdir,
+        version: version,
+        crt: crt,
+    })
+}
+
+
+function findVxCompiler(results) {
+    let path: Path? = me.targets.compiler.withpath
+    let platform = me.platform
+    let vxdir: Path?
+    let includes, vxarch, search
+    let env = {}
+
+    if (path) {
+        let gpath = path.name.match(/.*WindRiver.*gnu.*vxworks-\d*.\d*/)[0]
+        if (!gpath) {
+            throw 'Cannot parse compiler path ' + path
+        }
+        let vver = gpath.match(/vxworks-\d*.\d*/)
+        if (!vver) {
+            throw 'Cannot parse compiler path vxworks version ' + gpath
+        }
+        vxdir = Path(path.name.match(/.*WindRiver/)[0]).join(vver)
+    }
+    if (!vxdir) {
+        vxdir = App.getenv('WIND_BASE')
+    }
+    if (vxdir) {
+        search = [vxdir]
+    } else {
+        /*
+            Search for WindRiver in common places
+         */
+        search = []
+        if (Config.OS == 'windows') {
+            for each (drive in (FileSystem.drives() - ['A', 'B'])) {
+                search += Path(drive + ':/').files('WindRiver/vxworks-*')
+            }
+        }
+        search += Path('/WindRiver').files('vxworks-*') +
+                  Path('/usr/src/WindRiver').files('vxworks-*') +
+                  Path(App.getenv('HOME') + '/WindRiver').files('vxworks-*')
+        vxdir = probe('target/h/vxWorks.h', {search: search.sort().reverse(), nothrow: true})
+        if (!vxdir) {
+            vxdir = probe('host/include/vxsimapi.h', {search: search.sort().reverse()})
+        }
+    }
+    if (!vxdir.contains('-')) {
+        throw 'Unexpected VxWorks path. Should be of the format: "vxworks-version".\nPath is ' + vxdir
+    }
+    if (!vxdir.exists) {
+        throw 'Cannot find vxdir ' + vxdir
+    }
+    let version: String = vxdir.basename.toString().split('-')[1]
+    let major: Number = version.split('.')[0] cast Number
+    env.WIND_BASE = vxdir
+    env.WIND_HOME = vxdir.dirname
+
+    if (Config.OS == 'windows') {
+        env.WIND_HOST_TYPE = 'x86-win32'
+    } else if (Config.OS == 'linux') {
+        if (vxdir.join('host/x86-linux').exists) {
+            env.WIND_HOST_TYPE = 'x86-linux'
+        } else if (vxdir.join('host/x86-linux2').exists) {
+            env.WIND_HOST_TYPE = 'x86-linux2'
+        } else {
+            throw 'Cannot determine the WIND_HOST_TYPE'
+        }
+    } else if (Config.OS == 'solaris') {
+        env.WIND_HOST_TYPE = 'solaris2'
+    }
+
+    let vxsearch
+    if (major >= 7) {
+        env.WIND_HOME = vxdir.dirname
+        env.WIND_GNU_PATH = vxdir.dirname.files('compilers/gnu-*').sort().reverse()[0]
+        vxsearch = [
+            env.WIND_GNU_PATH.join(env.WIND_HOST_TYPE, 'bin'),
+            env.WIND_GNU_PATH.join(env.WIND_HOST_TYPE, me.platform.arch + '-wrs-vxworks/bin'),
+            env.WIND_BASE.join('host', env.WIND_HOST_TYPE, 'bin'),
+            env.WIND_HOME.files('workbench*/' + env.WIND_HOST_TYPE + '/bin').sort().reverse()[0],
+        ]
+        /* VxWorks 7.0 needs to fix: get_feature error on liblmapi.so */
+        env.LD_LIBRARY_PATH = env.WIND_HOME + '/license/lmapi-5/' + env.WIND_HOST_TYPE + '/lib'
+        includes = [ 
+            vxdir.join('samples/prebuilt_projects/vsb_vxsim_linux/share/h'),
+            vxdir.join('samples/prebuilt_projects/vsb_vxsim_linux/krnl/h/system'),
+            vxdir.join('samples/prebuilt_projects/vsb_vxsim_linux/krnl/h/public'),
+        ]
+
+    } else if (major >= 6) {
+        env.WIND_HOME = vxdir.dirname
+        env.WIND_GNU_PATH = vxdir.dirname.files('gnu/*-' + vxdir.basename).sort().reverse()[0]
+        vxsearch = [
+            env.WIND_GNU_PATH.join(env.WIND_HOST_TYPE, 'bin'),
+            env.WIND_GNU_PATH.join(env.WIND_HOST_TYPE, me.platform.arch + '-wrs-vxworks/bin'),
+            env.WIND_BASE.join('host', env.WIND_HOST_TYPE, 'bin'),
+            env.WIND_BASE.join('/host/resource/hutils/tcl'),
+            // env.WIND_HOME.files('workbench*/foundation/' + env.WIND_HOST_TYPE + '/bin').sort().reverse()[0],
+        ]
+        /* VxWorks 6.9 needs to fix: get_feature error on liblmapi.so */
+        env.LD_LIBRARY_PATH = env.WIND_HOME + '/lmapi-5.0/' + env.WIND_HOST_TYPE + '/lib'
+        includes = [ vxdir.join('target/h'), vxdir.join('target/h/wrn/coreip') ]
+
+    } else {
+        env.WIND_HOME = vxdir
+        env.WIND_GNU_PATH = ''
+        vxsearch = [
+            env.WIND_BASE.join('host', env.WIND_HOST_TYPE, 'bin'),
+            env.WIND_BASE.join('/host/resource/hutils/tcl'),
+            env.WIND_HOME.files('workbench*/foundation/' + env.WIND_HOST_TYPE + '/bin').sort().reverse()[0],
+        ]
+        /* VxWorks 6.9 needs to fix: get_feature error on liblmapi.so */
+        env.LD_LIBRARY_PATH = env.WIND_HOME + '/lmapi-5.0/' + env.WIND_HOST_TYPE + '/lib'
+        includes = [ vxdir.join('target/h'), vxdir.join('target/h/wrn/coreip') ]
+    }
+    env.DIST = 'WindRiver'
+    env.DIST_VER = version
+
+    if (platform.arch.match(/^i386|^i486/)) {
+        vxarch = '386'
+    } else if (platform.arch.match(/^i[56]86|^pentium|^x86/)) {
+        vxarch = 'pentium'
+    } else if (platform.arch.match(/^ppc/)) {
+        vxarch = 'ppc'
+    } else if (platform.arch.match(/^xscale|^arm/)) {
+        vxarch = 'arm'
+    } else if (platform.arch.match(/^68/)) {
+        vxarch = '68k'
+    } else if (platform.arch.match(/^sh/)) {
+        vxarch = 'sh'
+    } else if (platform.arch.match(/^mips$/)) {
+        vxarch = 'mips'
+    } else {
+        throw 'Unsupported CPU architecture: ' + platform.arch
+    }
+    if (!path) {
+        path = 'cc' + vxarch
+    }
+    path = probe(path, {fullpath: true, search: vxsearch})
+
+    blend(results, {
+        path:     path,
+        vxdir:    vxdir,
+        vxarch:   vxarch,
+        env:      env,
+        includes: includes,
+        search:   vxsearch,
+    })
+}
+
+function findPosixCompiler(results) {
+    let path: Path? = me.targets.compiler.withpath || ((me.platform.os == 'macosx') ? 'clang' : 'gcc')
+    results.path = probe(path, {fullpath: true})
+    return results
+}
+
+
+/*
+    Test compiler capabilities and determine a minimal set of compiler switches
+ */
+function getCompilerSettings(cc) {
+    let settings = {}
+    if (!me.options.gen && cc && (me.platform.like == 'unix' || 
+        (me.platform.os == 'vxworks' && Config.OS == 'linux'))) {
+        settings.hasAtomic = compile(cc, '',
+            'int main() { int a, b; a = 0 ; b = 1; __atomic_add_fetch(&a, b, __ATOMIC_RELAXED); return 0; }')
+        settings.hasAtomic64 = compile(cc, '',
+            'int main() { long long int a, b; a = 0 ; b = 1; __atomic_add_fetch(&a, b, __ATOMIC_RELAXED); return 0; }')
+        settings.hasDoubleBraces = compile(cc, '', 'typedef struct {int x, y;} Point;\nPoint p = {{0}};')
+        settings.hasDynLoad = compile(cc, '',
+            '#include <stdio.h>\n#include <dlfcn.h>\nint main() { dlopen(\"test.so\", 0); return 0; }')
+        settings.hasLibEdit = compile(cc, '',
+            '#include <histedit.h>\nint main() { history_init(); return 0; }')
+
+        if (me.platform.os != 'macosx') {
+            settings.hasLibRt = compile(cc, '',
+                '#define _GNU_SOURCE\n#include <time.h>\nint main() { struct timespec tv; clock_gettime(CLOCK_REALTIME, &tv); return 0; }')
+        }
+        settings.hasMmu = compile(cc, '',
+            '#include <stdio.h>\n#include <unistd.h>\nint main() { fork(); return 0; }')
+        settings.hasMtune = compile(cc, '-mtune=generic', 'int main() { return 0;}')
+        settings.hasPam = compile(cc, '',
+            '#include <security/pam_appl.h>\nint main() { void *x = pam_start; return x != 0; }')
+        settings.hasStackProtector = compile(cc, '-fstack-protector', 'int main() { return 0;}')
+        settings.hasSync = compile(cc, '',
+            'int main() { int a, b; a = 0 ; b = 1; __sync_add_and_fetch(&a, b); return 0; }')
+        settings.hasSync64 = compile(cc, '',
+            'int main() { long long int a, b; a = 0 ; b = 1; __sync_add_and_fetch(&a, b); return 0; }')
+        settings.hasSyncCas = compile(cc, '',
+            '#include <stdio.h>\nint main() { void *ptr = 0; __sync_bool_compare_and_swap(&ptr, ptr, ptr); return 0; }')
+        settings.hasUnnamedUnions = compile(cc, '', 
+            '#include <stdio.h>\nint main() { struct test { union { int x; int y; };}; return 0; }')
+        settings.warnUnused = compile(cc, '-Wno-unused-result',
+            '#include <stdio.h>\n#include <stdlib.h>\nint main() { realloc(0, 1024); return 0; }')
+        settings.warn64to32 = compile(cc, '-Wshorten-64-to-32', 'int main() { return 0;}')
+    } else {
+        settings = getDefaultSettings()
+    }
+    return settings
+}
+
+function setCompilerOptions(results, settings) {
+    let platform = me.platform
+    let arch = platform.arch
+
+    let prior = (me.settings.compiler || {}).clone()
+    makeme.loader.blendObj({ settings: { compiler: settings }})
+    blend(me.settings.compiler, prior, {combine: true})
+
+    results.compiler ||=  []
+    results.defines ||=  []
+    results.linker ||= []
+    results.includes ||=  []
+    results.includes.push(me.dir.inc)
+    results.libpaths ||=  []
+    results.libpaths.push(me.dir.bin)
+    results.libpaths ||=  []
+    results.libpaths.push(me.dir.bin)
+    results.libraries ||= [ ]
+
+    if (settings.warnUnused) {
+        results.compiler.push('-Wno-unused-result')
+    }
+    if (settings.warn64to32) {
+        results.compiler.push('-Wshorten-64-to-32')
+    }
+    if (settings.hasLibRt) {
+        results.libraries.push('rt')
+    }
+    if (me.settings.debug) {
+        results.defines.push('ME_DEBUG=1')
+    } else {
+        results.defines.push('ME_DEBUG=0')
+    }
+    if (platform.like == 'unix') {
+        /* Always include dl so that dlsym can be used even in static programs */
+        if (settings.hasDynLoad) {
+            results.libraries.push('dl')
+        }
+        results.compiler.push('-Wall')
+        results.libraries.push('pthread', 'm')
+        if (me.settings.debug) {
+            results.compiler.push('-g')
+            results.linker.push('-g')
+        } else if (me.settings.tune == 'size') {
+            results.compiler.push('-Os')
+        } else {
+            results.compiler.push('-O2')
+        }
+        if (platform.os != 'macosx') {
+            /* GCC not mac */
+            if (!me.settings.static) {
+                results.compiler.push('-fPIC')
+                results.defines.push('_REENTRANT', 'PIC')
+            }
+            /* 
+            if (arch.startsWith('arm')) {
+                results.compiler.push('-mno-sched-prolog')
+            } else 
+            */
+            if (arch.startsWith('ppc')) {
+                results.defines.push('_GNU_TOOL')
+            }
+        }
+        if (me.settings.compiler && me.settings.compiler.fortify) {
+            if (!me.settings.debug) {
+                results.defines.push(
+                    '-D_FORTIFY_SOURCE=2'
+                )
+            }
+            if (settings.hasStackProtector) {
+                results.compiler.push(
+                    '-fstack-protector',
+                    '--param=ssp-buffer-size=4'
+                )
+            }
+            results.compiler.push(
+                '-Wformat',
+                '-Wformat-security'
+            )
+            if (platform.os != 'macosx') {
+                results.compiler.push(
+                    '-Wl,-z,relro,-z,now',
+                    '-Wl,--as-needed',
+                    '-Wl,--no-copy-dt-needed-entries',
+                    '-Wl,-z,noexecstatck',
+                    '-Wl,-z,noexecheap'
+                )
+                if (me.settings.static) {
+                    /* 
+                        Note: gcc -static disables pie. But we do not use -static.
+                        Also note: cannot use pie with shared libraries
+                     */
+                    results.compiler.push(
+                        '-pie',
+                        '-fPIE'
+                    )
+                }
+            }
+        }
+    }
+    if (arch == 'arm') {
+        results.compiler.push('-fomit-frame-pointer')
+    }
+    if (platform.os == 'linux') {
+        if (!me.settings.static) {
+            results.linker.push('-rdynamic', '-Wl,--enable-new-dtags', '-Wl,-rpath,$ORIGIN/')
+        }
+
+    } else if (platform.os == 'macosx') {
+        /* 
+            results.compiler.push('-Wunreachable-code')
+         */
+        results.linker.push('-Wl,-rpath,@executable_path/', '-Wl,-rpath,@loader_path/')
+
+    } else if (platform.os == 'solaris') {
+        results.libraries.push('lxnet', 'rt', 'socket')
+
+    } else if (platform.os == 'vxworks') {
+        if (!results.vxdir) {
+            results.vxdir = Path('/WindRiver/vxworks-7')
+        }
+        let version: String = results.vxdir.basename.toString().split('-')[1]
+        let major: Number = version.split('.')[0] cast Number
+        let cpu = platform.cpu
+        if (!cpu) {
+            if (arch == 'i386') {
+                cpu = 'I80386'
+            } else if (arch == 'i486') {
+                cpu = 'I80486'
+            } else if (arch.match(/^i.86|^x86/)) {
+                if (arch == 'x86') {
+                    cpu = 'PENTIUM'
+                } else if (arch == 'x86sim') {
+                    cpu = '_VX_SIMLINUX'
+                } else {
+                    cpu = arch.toUpper()
+                }
+            } else {
+                if (arch == 'mips') {
+                    cpu = 'MIPS32'
+                } else if (arch == 'arm') {
+                    cpu = major >= 7 ? 'ARMARCH7' : 'ARM7TDMI'
+                } else {
+                    cpu = arch.toUpper()
+                }
+            }
+        }
+        results.defines.push(
+            'VXWORKS', 
+            'RW_MULTI_THREAD', 
+            'CPU=' + cpu.toUpper(), 
+            'TOOL_FAMILY=gnu', 
+            'TOOL=gnu', 
+            '_GNU_TOOL', 
+            '_WRS_KERNEL_')
+        if (major >= 7) {
+            results.defines.push(
+                '_VSB_CONFIG_FILE="' + 
+                    results.vxdir.join('samples/prebuilt_projects/vsb_vxsim_linux/h/config/vsbConfig.h') + '"'
+            )
+        }
+        results.compiler.push('-fno-builtin', '-fno-defer-pop', '-fvolatile')
+        if (arch.match(/mips/)) {
+            /* Don't use mips global pointer */
+            results.compiler.push('-G 0')
+        }
+        results.libraries.push('gcc')
+        results.linker.push('-Wl,-r')
+
+    } else if (platform.os == 'windows') {
+        results.compiler.push('-nologo', '-GR-', '-W3')
+        results.libraries.push('ws2_32.lib', 'advapi32.lib', 'user32.lib', 'kernel32.lib', 'oldnames.lib', 'shell32.lib')
+        results.linker.push('-nologo', '-incremental:no')
+        if (me.settings.single) {
+            if (me.settings.debug) {
+                results.compiler.push('-Zi', '-Od', '-MTd')
+                results.linker.push('-debug')
+            } else {
+                results.compiler.push('-O2', '-MT')
+            }
+        } else {
+            if (me.settings.debug) {
+                results.compiler.push('-Zi', '-Od', '-MDd')
+                results.linker.push('-debug')
+            } else {
+                results.compiler.push('-O2', '-MD')
+            }
+        }
+        results.subsystem = {
+            exe: 'console',
+            gui: 'windows',
+        }
+        results.entry = {
+            exe: 'mainCRTStartup',
+            gui: 'WinMainCRTStartup',
+        }
+        if (platform.arch == 'x64') {
+            results.linker.push('-machine:x64')
+            results.entry.lib = '_DllMainCRTStartup'
+        } else {
+            results.linker.push('-machine:x86')
+            results.entry.lib = '_DllMainCRTStartup@12'
+        }
+    }
+    return results
+}
+
+
+/*
+    Test compile to determine supported compiler switches. This is only used on gcc.
+ */
+function compile(cc: Path, command: String, contents: String = null): Boolean {
+    let file, cmd
+    let home = App.dir
+    try {
+        file = System.tmpdir.join('me-' + App.pid + '.c')
+        App.chdir(file.dirname)
+        if (contents) {
+            if (me.platform.os == 'vxworks') {
+                contents = '#define _VSB_CONFIG_FILE "vsbConfig.h\n' + contents
+            }
+            file.write(contents + '\n')
+            command += ' -c ' + file
+        }
+        let cc = 'cc'
+        let cflags = ''
+        if (me.platform.cross) {
+            cc = App.getenv('CC') || cc
+            cflags = App.getenv('CFLAGS') || ' '
+        }
+        command = '' + cc + ' -Werror -Wall ' + cflags + command
+        strace('Compile', command)
+        strace('Program', contents)
+        cmd = new Cmd
+        cmd.env = me.env
+        cmd.start(command)
+        if (cmd.status != 0) {
+            strace('Result', '  ' + cmd.error)
+        }
+    } finally {
+        if (file) {
+            file.remove()
+            file.basename.replaceExt('o').remove()
+        }
+        App.chdir(home)
+    }
+    return cmd.status == 0
+}
+
+
+function getDefaultSettings() {
+    let platform = me.platform
+    let settings
+    if (platform.like == 'windows') {
+        settings = {
+            hasAtomic: false,
+            hasAtomic64: false,
+            hasDynLoad: true,
+            hasLibEdit: false,
+            hasLibRt: false,
+            hasMmu: true,
+            hasStackProtector: false,
+            hasSync: false,
+            hasSync64: false,
+            hasSyncCas: false,
+            hasUnnamedUnions: true,
+        }
+    } else if (platform.os == 'linux') {
+        settings = {
+            hasAtomic: false,
+            hasAtomic64: false,
+            hasDoubleBraces: false,
+            hasDynLoad: true,
+            hasLibEdit: false,
+            hasLibRt: true,
+            hasMmu: true,
+            hasMtune: true,
+            hasPam: false,
+            hasStackProtector: true,
+            hasSync: true,
+            hasSync64: true,
+            hasSyncCas: false,
+            hasUnnamedUnions: true,
+            warn64to32: false,
+            warnUnused: true,
+        }
+    } else if (platform.os == 'macosx') {
+        settings = {
+            hasAtomic: true,
+            hasAtomic64: true,
+            hasDoubleBraces: true,
+            hasLibEdit: true,
+            hasLibRt: false,
+            hasDynLoad: true,
+            hasMmu: true,
+            hasMtune: true,
+            hasPam: true,
+            hasStackProtector: true,
+            hasSync: true,
+            hasSync64: true,
+            hasSyncCas: true,
+            hasUnnamedUnions: true,
+            warn64to32: true,
+            warnUnused: true,
+        }
+    } else if (platform.os == 'vxworks') {
+        settings = {
+            hasAtomic: false,
+            hasAtomic64: false,
+            hasDoubleBraces: false,
+            hasLibEdit: false,
+            hasLibRt: false,
+            hasDynLoad: true,
+            hasMmu: true,
+            hasMtune: false,
+            hasPam: false,
+            hasStackProtector: true,
+            hasSync: false,
+            hasSync64: false,
+            hasSyncCas: false,
+            hasUnnamedUnions: true,
+            warn64to32: false,
+            warnUnused: false,
+        }
+    } else {
+        settings = {
+            hasAtomic: true,
+            hasAtomic64: true,
+            hasDoubleBraces: true,
+            hasLibEdit: false,
+            hasLibRt: false,
+            hasDynLoad: true,
+            hasMmu: true,
+            hasMtune: true,
+            hasPam: false,
+            hasStackProtector: true,
+            hasSync: false,
+            hasSync64: false,
+            hasSyncCas: false,
+            hasUnnamedUnions: true,
+            warn64to32: false,
+            warnUnused: false,
+        }
+    }
+    return settings
+}

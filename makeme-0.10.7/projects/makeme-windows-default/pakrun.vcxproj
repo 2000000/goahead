@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+      <PropertyGroup Label="Globals">
+        <ProjectGuid>{ed880c97-4985-44d3-8f95-7e85a8e95849}</ProjectGuid>
+        <RootNamespace />
+        <Keyword>Win32Proj</Keyword>
+      </PropertyGroup>
+
+      <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+          <Configuration>Debug</Configuration>
+          <Platform>Win32</Platform>
+        </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+          <Configuration>Release</Configuration>
+          <Platform>Win32</Platform>
+        </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+          <Configuration>Debug</Configuration>
+          <Platform>x64</Platform>
+        </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+          <Configuration>Release</Configuration>
+          <Platform>x64</Platform>
+        </ProjectConfiguration>
+  </ItemGroup>
+    
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+        <ConfigurationType></ConfigurationType>
+        <CharacterSet>NotSet</CharacterSet>
+        <PlatformToolset>v120</PlatformToolset>
+      </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+        <ConfigurationType></ConfigurationType>
+        <CharacterSet>NotSet</CharacterSet>
+        <PlatformToolset>v120</PlatformToolset>
+      </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+        <ConfigurationType></ConfigurationType>
+        <CharacterSet>NotSet</CharacterSet>
+        <PlatformToolset>v120</PlatformToolset>
+      </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+        <ConfigurationType></ConfigurationType>
+        <CharacterSet>NotSet</CharacterSet>
+        <PlatformToolset>v120</PlatformToolset>
+      </PropertyGroup>
+
+      <Import Project="$(VCTargetsPath)Microsoft.Cpp.Default.props" />
+      <Import Project="$(VCTargetsPath)Microsoft.Cpp.props" />
+
+      <ImportGroup Label="PropertySheets" />
+      <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+        <Import Project="product.props" />
+        <Import Project="debug.props" />
+        <Import Project="x86.props" />
+      </ImportGroup>
+      <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+        <Import Project="product.props" />
+        <Import Project="release.props" />
+        <Import Project="x86.props" />
+      </ImportGroup>
+      <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+        <Import Project="product.props" />
+        <Import Project="debug.props" />
+        <Import Project="x64.props" />
+      </ImportGroup>
+      <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+        <Import Project="product.props" />
+        <Import Project="release.props" />
+        <Import Project="x64.props" />
+      </ImportGroup>
+
+      <PropertyGroup>
+        <_ProjectFileVersion>10</_ProjectFileVersion>
+
+        <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(BinDir)\</OutDir>
+        <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ObjDir)\pakrun\</IntDir>
+        <CustomBuildBeforeTargets Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PreBuildEvent</CustomBuildBeforeTargets>
+
+        <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(BinDir)\</OutDir>
+        <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ObjDir)\pakrun\</IntDir>
+        <CustomBuildBeforeTargets Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PreBuildEvent</CustomBuildBeforeTargets>
+
+        <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(BinDir)\</OutDir>
+        <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ObjDir)\pakrun\</IntDir>
+        <CustomBuildBeforeTargets Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PreBuildEvent</CustomBuildBeforeTargets>
+
+        <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BinDir)\</OutDir>
+        <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ObjDir)\pakrun\</IntDir>
+        <CustomBuildBeforeTargets Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PreBuildEvent</CustomBuildBeforeTargets>
+  </PropertyGroup>
+    <PropertyGroup>
+        <TargetName></TargetName>
+    </PropertyGroup>
+
+      <ItemDefinitionGroup>
+        
+
+      <CustomBuildStep>
+        <Command>cd ..\..
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\appweb.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\compiler.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\components.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\ejscript.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\lib.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\link.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\rc.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-components\testme.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-installs\Installs.es $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-installs\installs.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-installs\manifest.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-make\Make.es $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-make\make.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\freebsd.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\gcc.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\linux.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\macosx.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\os.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\solaris.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\unix.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\vxworks.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-os\windows.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-vstudio\Vstudio.es $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-vstudio\vstudio.me $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-xcode\Xcode.es $(BinDir)
+if exist $(BinDir) del /Q $(BinDir)
+copy /Y paks\me-xcode\xcode.me $(BinDir)
+cd projects\makeme-windows-default</Command>
+        <Outputs>$(BinDir)</Outputs>
+      </CustomBuildStep>
+  </ItemDefinitionGroup>
+
+  <Import Project="$(VCTargetsPath)Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+
+</Project>
