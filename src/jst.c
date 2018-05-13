@@ -355,14 +355,20 @@ PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv)
 
     if(!strcmp(argv[0],"fpga1")){
         sprintf(tmp, "%08X", fpga0_ver);
+        tmp[2] = '.';
+        tmp[5] = '.';
         websWriteBlock(wp, tmp, strlen(tmp));
     } else if(!strcmp(argv[0],"zynq")){
         sprintf(tmp, "%08X", zynq_ver);
+        tmp[2] = '.';
+        tmp[5] = '.';
         websWriteBlock(wp, tmp, strlen(tmp));
     } else if(!strcmp(argv[0],"linux")) {
         websWriteBlock(wp, "kernel-4.14", strlen("kernel-4.14"));
     } else if(!strcmp(argv[0],"fpga0")){
         sprintf(tmp, "%08X", fpga1_ver);
+        tmp[2] = '.';
+        tmp[5] = '.';
         websWriteBlock(wp, tmp, strlen(tmp));
     }
     return 0;
