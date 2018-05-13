@@ -473,6 +473,8 @@ static void readPhase(Webs *wp)
     theta1 = atoi(theta);
     phi1 = atoi(phi);
 
+
+    PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
     DEBUG_ANGLE_SET(theta1, phi1);
 
     usleep(1000);
@@ -496,7 +498,8 @@ static void readPhase(Webs *wp)
     for(i=0; i<23; i++) {
         websWrite(wp,"%02x ", read_back[i]);
     }
-    websDone(wp);
+    websDone(wp);   
+    PL_REG_WRITE(ADDR_DBG_mode,0);  //OPEN THE DEBUG MODE
 }
 
 /*------------------------------------------------------------*/
@@ -506,10 +509,11 @@ void  DEBUG_SGL_SET(unsigned int ch_no,unsigned int datt,unsigned int phase,unsi
 
         PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
         
-        set_data = ch_no<<16 | sw<<15 | phase<<6 | datt;
+        set_data = ch_no<<16 | sw<<15 | phase<<8 | datt;
 
         PL_REG_WRITE(ADDR_SGL_set_value,set_data);  //OPEN THE DEBUG MODE
-        
+       
+        printf("SGL:0x%x\r\n", PL_REG_READ(ADDR_SGL_set_value)); 
         PL_REG_WRITE(ADDR_SGL_set_dv,0x00);  //write the ctrl to bus in the pl
         PL_REG_WRITE(ADDR_SGL_set_dv,0x01);  //write the ctrl to bus in the pl
         PL_REG_WRITE(ADDR_SGL_set_dv,0x00);  //write the ctrl to bus in the pl
@@ -533,8 +537,14 @@ static void channelSet(Webs *wp)
     cha1 = atoi(cha);
     phase1 = atoi(phase);
     datt1 = atoi(datt);
-    //sw1 = atoi(sw);
+    
+    if(sw){
+       sw1 = 1;
+    } else {
+       sw1 = 0;
+    }
 
+    printf("%d %d %d %d \n\r", cha1, datt1, phase1, sw1);
     DEBUG_SGL_SET(cha1, datt1, phase1, sw1);
 }
 

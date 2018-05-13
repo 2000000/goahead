@@ -3439,6 +3439,7 @@ PUBLIC int websJstWrite(int jid, Webs *wp, int argc, char **argv);
 PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv);
 PUBLIC int websJstGetVol(int jid, Webs *wp, int argc, char **argv);
 PUBLIC int websJstGetThermal(int jid, Webs *wp, int argc, char **argv);
+PUBLIC int websJstFlashStatus(int jid, Webs *wp, int argc, char **argv);
 #endif
 
 /*************************************** SSL ***********************************/

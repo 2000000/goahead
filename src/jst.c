@@ -189,6 +189,7 @@ PUBLIC int websJstOpen()
     websDefineJst("readVer", websJstReadVer);
     websDefineJst("getVol", websJstGetVol);
     websDefineJst("getThermal", websJstGetThermal);
+    websDefineJst("flash_status", websJstFlashStatus);
     websDefineHandler("jst", 0, jstHandler, closeJst, 0);
     return 0;
 }
@@ -419,6 +420,22 @@ PUBLIC int websJstGetThermal(int jid, Webs *wp, int argc, char **argv)
 
     websWriteBlock(wp, temp_s, strlen(temp_s));
 	return 0;
+}
+
+
+PUBLIC int websJstFlashStatus(int jid, Webs *wp, int argc, char **argv)
+{
+    assert(websValid(wp));
+    int fd;
+
+    fd = open("/run/media/mmcblk0p1/cali.bin", O_RDONLY);
+
+    if (fd < 0) {
+    websWriteBlock(wp, "校验文件不存在", strlen("校验文件不存在"));
+    } else {
+    websWriteBlock(wp, "校验文件存在", strlen("校验文件存在"));
+    }
+
 }
 
 /* -------------------------------------------------- */
