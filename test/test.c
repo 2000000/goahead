@@ -81,6 +81,11 @@ static void actionTest(Webs *wp);
 static void setipaddress(Webs *wp);
 static void gettemp(Webs *wp);
 static void readPhase(Webs *wp);
+static void channelSet(Webs *wp);
+static void rs422_normal(Webs *wp);
+static void rs422_loop_line(Webs *wp);
+static void rs422_loop_data(Webs *wp);
+static void rs422_tx_test(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -207,6 +212,11 @@ MAIN(goahead, int argc, char **argv, char **envp)
     websDefineAction("sessionTest", sessionTest);
     websDefineAction("gettemp", gettemp);
     websDefineAction("readPhase", readPhase);
+    websDefineAction("channelSet", channelSet);
+    websDefineAction("rs422_normal", rs422_normal);
+    websDefineAction("rs422_loop_line", rs422_loop_line);
+    websDefineAction("rs422_loop_data", rs422_loop_data);
+    websDefineAction("rs422_tx_test", rs422_tx_test);
     websDefineAction("showTest", showTest);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
     websDefineAction("uploadTest", uploadTest);
@@ -489,6 +499,102 @@ static void readPhase(Webs *wp)
     websDone(wp);
 }
 
+/*------------------------------------------------------------*/
+void  DEBUG_SGL_SET(unsigned int ch_no,unsigned int datt,unsigned int phase,unsigned int sw)  //write data to all fpga
+{      
+        unsigned int set_data;
+
+        PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
+        
+        set_data = ch_no<<16 | sw<<15 | phase<<6 | datt;
+
+        PL_REG_WRITE(ADDR_SGL_set_value,set_data);  //OPEN THE DEBUG MODE
+        
+        PL_REG_WRITE(ADDR_SGL_set_dv,0x00);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_SGL_set_dv,0x01);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_SGL_set_dv,0x00);  //write the ctrl to bus in the pl
+
+        PL_REG_WRITE(ADDR_DBG_mode,0);  //CLOSE THE DEBUG MODE
+        
+}
+
+static void channelSet(Webs *wp)
+{
+    cchar *cha, *datt, *phase, *sw;
+    cha = websGetVar(wp, "cha", NULL);
+    phase = websGetVar(wp, "phase", NULL);
+    datt = websGetVar(wp, "datt", NULL);
+    sw = websGetVar(wp, "sw", NULL);
+
+    printf("param is: -%s- %s- %s- %s-\n", cha, phase, datt, sw);
+
+    unsigned int cha1, phase1, datt1, sw1;
+
+    cha1 = atoi(cha);
+    phase1 = atoi(phase);
+    datt1 = atoi(datt);
+    //sw1 = atoi(sw);
+
+    DEBUG_SGL_SET(cha1, datt1, phase1, sw1);
+}
+
+/*----------------------------------------------------------*/
+
+void RS422_LOOP_LINE() //phase readback
+{
+  PL_REG_WRITE(ADDR_DBG_mode,1);  //open THE DEBUG MODE
+  PL_REG_WRITE(ADDR_RS422_LOOP,0x01);  //write the ctrl to bus in the pl
+}
+
+
+void RS422_LOOP_DATA() //phase readback
+{
+  PL_REG_WRITE(ADDR_DBG_mode,1);  //open THE DEBUG MODE
+  PL_REG_WRITE(ADDR_RS422_LOOP,0x02);  //write the ctrl to bus in the pl
+}
+
+void RS422_normal() //normal
+{
+  PL_REG_WRITE(ADDR_DBG_mode,0);  //CLOSE THE DEBUG MODE
+  PL_REG_WRITE(ADDR_RS422_LOOP,0x00);  //write the ctrl to bus in the pl
+}
+
+
+void RS422_TX_TEST()//send 0 -->255
+{
+  int i;
+   PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
+   for (i=0;i<255;i++)
+  {
+        PL_REG_WRITE(ADDR_RS422_PS_TST_DATA,i);  //write the data to bus in the pl
+      
+        PL_REG_WRITE(ADDR_RS422_PS_TST_DATA_dv,0x00);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_RS422_PS_TST_DATA_dv,0x01);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_RS422_PS_TST_DATA_dv,0x00);  //write the ctrl to bus in the pl
+  }
+}
+
+static void rs422_normal(Webs *wp)
+{
+    RS422_normal();
+}
+
+static void rs422_loop_line(Webs *wp)
+{
+    RS422_LOOP_LINE();
+}
+
+static void rs422_loop_data(Webs *wp)
+{
+    RS422_LOOP_DATA();
+}
+
+static void rs422_tx_test(Webs *wp)
+{
+    RS422_TX_TEST();
+}
+
+/*-----------------------------------------------------*/
 static void showTest(Webs *wp)
 {
     WebsKey     *s;
