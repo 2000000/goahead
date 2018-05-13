@@ -3432,7 +3432,8 @@ PUBLIC int websJstOpen();
 
 void read_reg(void);
 unsigned int REG_READ_4byte(int offset);
-
+void PL_REG_WRITE(unsigned int addr, unsigned int value);
+unsigned int PL_REG_READ(int offset);
 
 PUBLIC int websJstWrite(int jid, Webs *wp, int argc, char **argv);
 PUBLIC int websJstReadVer(int jid, Webs *wp, int argc, char **argv);

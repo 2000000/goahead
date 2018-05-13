@@ -14,13 +14,39 @@
  */
 
 /********************************* Includes ***********************************/
-
+#include <stdlib.h>
+#include <unistd.h>
 #include    "goahead.h"
 #include    "js.h"
 
 /********************************* Defines ************************************/
 
 static int finished = 0;
+
+
+#define ADDR_DBG_mode        0x020
+
+#define ADDR_DBG_thea        0x021
+#define ADDR_DBG_phi         0x022
+#define ADDR_DBG_fm          0x023
+#define ADDR_DBG_sw          0x024
+#define ADDR_DBG_dv          0x025
+
+
+#define ADDR_DBG_calc_chno   0x026
+#define ADDR_DBG_calc_value  0x027
+#define ADDR_DBG_calc_rd     0x028
+
+//single channel set
+#define ADDR_SGL_set_value   0x030  // data to be writed
+#define ADDR_SGL_set_dv      0x031  // config value to pl by write 0 -->1-->0 
+
+////RS422
+#define ADDR_RS422_LOOP   0x046 // loop mode
+#define ADDR_RS422_PS_TST_DATA      0x044 // data to be writed
+#define ADDR_RS422_PS_TST_DATA_dv   0x045 // data to be writed
+
+
 
 #undef ME_GOAHEAD_LISTEN
 /*
@@ -54,6 +80,7 @@ static int bigTest(int eid, Webs *wp, int argc, char **argv);
 static void actionTest(Webs *wp);
 static void setipaddress(Webs *wp);
 static void gettemp(Webs *wp);
+static void readPhase(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -179,6 +206,7 @@ MAIN(goahead, int argc, char **argv, char **envp)
     websDefineAction("setipaddress", setipaddress);
     websDefineAction("sessionTest", sessionTest);
     websDefineAction("gettemp", gettemp);
+    websDefineAction("readPhase", readPhase);
     websDefineAction("showTest", showTest);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
     websDefineAction("uploadTest", uploadTest);
@@ -386,6 +414,79 @@ static void gettemp(Webs *wp)
     websFlush(wp, 0);
 	websDone(wp);
 
+}
+
+////////////////////////////////////////
+
+void  DEBUG_ANGLE_SET(unsigned int theta,unsigned int phi)  //write data to all fpga
+{      
+        PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
+        PL_REG_WRITE(ADDR_DBG_thea,theta);  //OPEN THE DEBUG MODE
+        PL_REG_WRITE(ADDR_DBG_phi,phi);  //OPEN THE DEBUG MODE
+        //PL_REG_WRITE(ADDR_DBG_fm,fm);  //OPEN THE DEBUG MODE
+        //PL_REG_WRITE(ADDR_DBG_sw,sw);  //OPEN THE DEBUG MODE
+
+        PL_REG_WRITE(ADDR_DBG_dv,0x00);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_DBG_dv,0x01);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_DBG_dv,0x00);  //write the ctrl to bus in the pl
+
+        PL_REG_WRITE(ADDR_DBG_mode,0);  //CLOSE THE DEBUG MODE
+}
+
+
+
+unsigned int phase_read_back(unsigned int ch_no) //phase readback
+{
+    PL_REG_WRITE(ADDR_DBG_calc_chno,ch_no);  //OPEN THE DEBUG MODE
+
+        PL_REG_WRITE(ADDR_DBG_calc_rd,0x00);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_DBG_calc_rd,0x01);  //write the ctrl to bus in the pl
+        PL_REG_WRITE(ADDR_DBG_calc_rd,0x00);  //write the ctrl to bus in the pl
+
+        return PL_REG_READ(ADDR_DBG_calc_value);  //write the ctrl to bus in the pl
+
+}
+
+////////////////////////////////////////
+
+
+static void readPhase(Webs *wp)
+{
+    cchar *theta, *phi;
+    theta = websGetVar(wp, "theta", NULL);
+    phi = websGetVar(wp, "phi", NULL);
+    printf("theta is : %s\n", theta);
+    printf("phi is: %s\n", phi);
+
+    unsigned int theta1, phi1;
+
+    theta1 = atoi(theta);
+    phi1 = atoi(phi);
+
+    DEBUG_ANGLE_SET(theta1, phi1);
+
+    usleep(1000);
+
+    unsigned char read_back[24];
+    int i;
+
+    for (i = 0; i < 23; i ++) {
+        read_back[i] =  phase_read_back(i);
+    }
+
+    char tostringtmp[128] = {0};
+    
+    for (i = 0; i < 23; i ++) {
+        ;
+    }
+    
+    websSetStatus(wp, 200);
+    websWriteHeaders(wp, -1, 0);
+    websWriteEndHeaders(wp);
+    for(i=0; i<23; i++) {
+        websWrite(wp,"%02x ", read_back[i]);
+    }
+    websDone(wp);
 }
 
 static void showTest(Webs *wp)
