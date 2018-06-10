@@ -430,7 +430,8 @@ static void gettemp(Webs *wp)
 
 void  DEBUG_ANGLE_SET(unsigned int theta,unsigned int phi)  //write data to all fpga
 {      
-        PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
+    //ywy 0611 00:17 删除第一行和最后一行
+        //PL_REG_WRITE(ADDR_DBG_mode,1);  //OPEN THE DEBUG MODE
         PL_REG_WRITE(ADDR_DBG_thea,theta);  //OPEN THE DEBUG MODE
         PL_REG_WRITE(ADDR_DBG_phi,phi);  //OPEN THE DEBUG MODE
         //PL_REG_WRITE(ADDR_DBG_fm,fm);  //OPEN THE DEBUG MODE
@@ -440,7 +441,7 @@ void  DEBUG_ANGLE_SET(unsigned int theta,unsigned int phi)  //write data to all 
         PL_REG_WRITE(ADDR_DBG_dv,0x01);  //write the ctrl to bus in the pl
         PL_REG_WRITE(ADDR_DBG_dv,0x00);  //write the ctrl to bus in the pl
 
-        PL_REG_WRITE(ADDR_DBG_mode,0);  //CLOSE THE DEBUG MODE
+        //PL_REG_WRITE(ADDR_DBG_mode,0);  //CLOSE THE DEBUG MODE
 }
 
 
