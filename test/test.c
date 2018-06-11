@@ -86,6 +86,7 @@ static void rs422_normal(Webs *wp);
 static void rs422_loop_line(Webs *wp);
 static void rs422_loop_data(Webs *wp);
 static void rs422_tx_test(Webs *wp);
+static void system_reboot(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -217,6 +218,7 @@ MAIN(goahead, int argc, char **argv, char **envp)
     websDefineAction("rs422_loop_line", rs422_loop_line);
     websDefineAction("rs422_loop_data", rs422_loop_data);
     websDefineAction("rs422_tx_test", rs422_tx_test);
+    websDefineAction("system_reboot", system_reboot);
     websDefineAction("showTest", showTest);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
     websDefineAction("uploadTest", uploadTest);
@@ -604,6 +606,12 @@ static void rs422_tx_test(Webs *wp)
 {
     RS422_TX_TEST();
 }
+
+static void system_reboot(Webs *wp)
+{
+    system("reboot -f");
+}
+
 
 /*-----------------------------------------------------*/
 static void showTest(Webs *wp)
