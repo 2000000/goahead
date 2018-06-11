@@ -87,6 +87,7 @@ static void rs422_loop_line(Webs *wp);
 static void rs422_loop_data(Webs *wp);
 static void rs422_tx_test(Webs *wp);
 static void system_reboot(Webs *wp);
+static void remove_cali(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -612,6 +613,10 @@ static void system_reboot(Webs *wp)
     system("reboot -f");
 }
 
+static void remove_cali(Webs *wp)
+{
+    system("rm /run/media/mmcblk0p1/cali.bin");
+}
 
 /*-----------------------------------------------------*/
 static void showTest(Webs *wp)
