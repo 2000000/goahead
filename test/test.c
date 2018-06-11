@@ -88,6 +88,7 @@ static void rs422_loop_data(Webs *wp);
 static void rs422_tx_test(Webs *wp);
 static void system_reboot(Webs *wp);
 static void remove_cali(Webs *wp);
+static void cali_status(Webs *wp);
 static void sessionTest(Webs *wp);
 static void showTest(Webs *wp);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
@@ -220,6 +221,8 @@ MAIN(goahead, int argc, char **argv, char **envp)
     websDefineAction("rs422_loop_data", rs422_loop_data);
     websDefineAction("rs422_tx_test", rs422_tx_test);
     websDefineAction("system_reboot", system_reboot);
+    websDefineAction("remove_cali", remove_cali);
+    websDefineAction("cali_status", cali_status);
     websDefineAction("showTest", showTest);
 #if ME_GOAHEAD_UPLOAD && !ME_ROM
     websDefineAction("uploadTest", uploadTest);
@@ -490,12 +493,6 @@ static void readPhase(Webs *wp)
         read_back[i] =  phase_read_back(i);
     }
 
-    char tostringtmp[128] = {0};
-    
-    for (i = 0; i < 23; i ++) {
-        ;
-    }
-    
     websSetStatus(wp, 200);
     websWriteHeaders(wp, -1, 0);
     websWriteEndHeaders(wp);
@@ -550,6 +547,11 @@ static void channelSet(Webs *wp)
 
     printf("%d %d %d %d \n\r", cha1, datt1, phase1, sw1);
     DEBUG_SGL_SET(cha1, datt1, phase1, sw1);
+
+    websSetStatus(wp, 200);
+    websWriteHeaders(wp, -1, 0);
+    websWriteEndHeaders(wp);
+    websDone(wp);   
 }
 
 /*----------------------------------------------------------*/
@@ -591,21 +593,41 @@ void RS422_TX_TEST()//send 0 -->255
 static void rs422_normal(Webs *wp)
 {
     RS422_normal();
+  websSetStatus(wp, 200);
+  websWriteHeaders(wp, -1, 0);
+  websWriteEndHeaders(wp);
+  websDone(wp);   
+
 }
 
 static void rs422_loop_line(Webs *wp)
 {
     RS422_LOOP_LINE();
+  websSetStatus(wp, 200);
+  websWriteHeaders(wp, -1, 0);
+  websWriteEndHeaders(wp);
+  websDone(wp);   
+
 }
 
 static void rs422_loop_data(Webs *wp)
 {
     RS422_LOOP_DATA();
+  websSetStatus(wp, 200);
+  websWriteHeaders(wp, -1, 0);
+  websWriteEndHeaders(wp);
+  websDone(wp);   
+
 }
 
 static void rs422_tx_test(Webs *wp)
 {
     RS422_TX_TEST();
+  websSetStatus(wp, 200);
+  websWriteHeaders(wp, -1, 0);
+  websWriteEndHeaders(wp);
+  websDone(wp);   
+
 }
 
 static void system_reboot(Webs *wp)
@@ -617,6 +639,27 @@ static void remove_cali(Webs *wp)
 {
     system("rm /run/media/mmcblk0p1/cali.bin");
 }
+
+static void cali_status(Webs *wp)
+{
+    int fd;
+
+    fd = open("/run/media/mmcblk0p1/cali.bin", O_RDONLY);
+
+    websSetStatus(wp, 200);
+    websWriteHeaders(wp, -1, 0);
+    websWriteEndHeaders(wp);
+
+    if (fd < 0) {
+        websWrite(wp, "校验文件不存在", strlen("校验文件不存在"));
+    } else {
+        websWrite(wp, "校验文件存在", strlen("校验文件存在"));
+    } 
+ 
+    websFlush(wp, 0);
+	websDone(wp);
+}
+
 
 /*-----------------------------------------------------*/
 static void showTest(Webs *wp)
